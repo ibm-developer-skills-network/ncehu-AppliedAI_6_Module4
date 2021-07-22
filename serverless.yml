@@ -39,12 +39,12 @@ functions:
     handler: CourseAdvisor.connectDiscovery
     name: ${self:custom.package}/connectDiscovery
     parameters:
-      discoveryUsername: ${self:custom.discovery.username}
-      discoveryPassword: ${self:custom.discovery.password}
-      environmentId: ${self:custom.discovery.environmentId}
-      collectionId: ${self:custom.discovery.collectionId}
-      url: ${self:custom.discovery.url}
-      intent: ${self:custom.discovery.intent}
+      discoveryUsername: ${custom.discovery.username}
+      discoveryPassword: ${custom.discovery.password}
+      environmentId: ${custom.discovery.environmentId}
+      collectionId: ${custom.discovery.collectionId}
+      url: ${custom.discovery.url}
+      intent: ${custom.discovery.intent}
 
 # extend the framework using plugins listed here:
 # https://github.com/serverless/plugins
