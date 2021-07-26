@@ -19,8 +19,6 @@ provider:
   name: openwhisk
   runtime: nodejs:10
 
-variablesResolutionMode: 20210326
-configValidationMode: error
 
 custom:
   package: lab4
