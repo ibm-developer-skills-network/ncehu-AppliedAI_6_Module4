@@ -17,16 +17,14 @@ service: lab-4 # NOTE: update this with your service name
 # $ npm install
 provider:
   name: openwhisk
-  runtime: nodejs:10
+  runtime: nodejs:12
 
 
 custom:
   package: lab4
   discovery:
-    username: YOUR_USERNAME
-    password: YOUR_DISCOVERY_PASSWORD
-    environmentId: ENVIRONMENT_ID
-    collectionId: COLLECTION_ID
+    projectId: YOUR_PROJECT_ID
+    discoveryAPIKey: YOUR_APIKEY
     url: YOUR_DISCOVERY_URL
     intent: course_recommendation # DO NOT CHANGE
 
@@ -40,10 +38,8 @@ functions:
     handler: CourseAdvisor.connectDiscovery
     name: ${self:custom.package}/connectDiscovery
     parameters:
-      discoveryUsername: ${self:custom.discovery.username}
-      discoveryPassword: ${self:custom.discovery.password}
-      environmentId: ${self:custom.discovery.environmentId}
-      collectionId: ${self:custom.discovery.collectionId}
+      discoveryAPIKey: ${self:custom.discovery.discoveryAPIKey}
+      projectId: ${self:custom.discovery.projectId}
       url: ${self:custom.discovery.url}
       intent: ${self:custom.discovery.intent}
 
