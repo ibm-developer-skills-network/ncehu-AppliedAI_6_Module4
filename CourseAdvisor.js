@@ -1,128 +1,122 @@
-const DiscoveryV1 = require("ibm-watson/discovery/v1");
+const DiscoveryV2 = require('ibm-watson/discovery/v2');
+const {IamAuthenticator }= require('ibm-watson/auth');
+let collection_id;
 
-async function queryDiscovery(
-  environmentId,
-  collectionId,
-  discoveryUsername,
-  discoveryPassword,
-  query,
-  url
-) {
-  // Function to query Discovery
-  try {
-    const discovery = new DiscoveryV1({
-      version: "2019-02-01",
-      username: discoveryUsername,
-      password: discoveryPassword,
-      url: url
-    });
-
-    const queryResult = await discovery.query({
-      environment_id: environmentId,
-      collection_id: collectionId,
-      query: query
-    });
-
-    return queryResult;
-  } catch (err) {
-    throw new Error(err.message);
-  }
-}
-
-async function recommendCourse(queryResult) {
-  try {
-    const courses = [];
-
-    queryResult.results.forEach(result => {
-      if (courses.length <= 3) {
-        const course = {
-          name: result.name,
-          link: `https://www.coursera.org/learn/${result.slug}`,
-          description: result.description.split(".")[0]
-        };
-        courses.push(course);
-      }
-    });
-
-    if (courses.length === 0) {
-      throw new Error("No courses are found");
-    }
-
-    return { courses };
-  } catch (err) {
-    throw new Error(err.message);
-  }
-}
-
-async function answerFaq(queryResult) {
-  try {
-    textContent = queryResult.results[0].text;
-    splitTextContent = textContent.split("\n\n");
-
-    if (splitTextContent.length >= 9) {
-      return {
-        res: splitTextContent[6] + splitTextContent[7] + splitTextContent[8]
-      };
-    }
-    throw new Error(
-      "Sorry, we are unable to find the answer from Help Centre."
-    );
-  } catch (err) {
-    throw new Error(err.message);
-  }
-}
-
-const CourseraAdvisor = {
-  async connectDiscovery(params) {
-    const {
-      discoveryUsername,
-      discoveryPassword,
-      environmentId,
-      collectionId,
-      input,
-      intent,
-      url
-    } = params;
-
+async function queryDiscovery(  projectId,
+                                discoveryAPIKey,
+                                input,
+                                intent,
+                                url
+                            ) {
+    // Function to query Discovery
     try {
-      let enrichedField;
-      if (intent === "course_recommendation") {
-        enrichedField = "description";
-      } else if (intent === "faq") {
-        enrichedField = "text";
-      } else {
-        throw new Error(`Intent: ${intent} cannot be recognized`);
-      }
-
-      const queryString = `enriched_${enrichedField}.keywords.text: ${input}`;
-
-      const queryResult = await queryDiscovery(
-        environmentId,
-        collectionId,
-        discoveryUsername,
-        discoveryPassword,
-        queryString,
-        url
-      );
-
-      if (!queryResult) {
-        return "No query result found";
-      } else if (!queryResult.results) {
+        projectId = projectId;
+        const discovery = new DiscoveryV2({
+            version: '2020-08-30',
+            authenticator: new IamAuthenticator({
+            apikey: discoveryAPIKey,
+            }),
+            serviceUrl: url,
+        });
+        let results = await discovery.listCollections({projectId});
+        let collectionName = "Coursera";
+        if(intent === "faq") {
+            collectionName = "help center"
+        }
+        collections = results.result.collections;
+        let collection = collections.filter(resultVal=>{
+            return resultVal.name === collectionName
+        })
+        collection_id = collection[0].collection_id;
+        const queryResult = await discovery.query({
+                                    projectId:projectId,
+                                    collection_ids:[collection_id],
+                                    query:input
+                                });
         return queryResult;
-      }
-
-      let res;
-      if (intent === "course_recommendation") {
-        res = await recommendCourse(queryResult);
-      } else {
-        res = await answerFaq(queryResult);
-      }
-
-      return res;
     } catch (err) {
-      return { err: err.message };
+        throw new Error(err.message);
     }
-  }
 };
 
-module.exports = CourseraAdvisor;
+async function recommendCourse(queryResult) {
+    try {
+        const courses = [];
+        queryResult.result.results.forEach(res_result => {
+            if (res_result.result_metadata.collection_id === collection_id) {
+                if (courses.length <= 3) {
+                    const course = {
+                        name: res_result.name,
+                        link: `https://www.coursera.org/learn/${res_result.slug}`,
+                        description: res_result.description[0].split(".")[0]
+                    };
+                    courses.push(course);
+                }
+            }
+        });
+        if (courses.length === 0) {
+            throw new Error("No courses are found");
+        }
+        return { courses };
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+async function answerFaq(queryResult) {
+    try {
+        let helpQueries = queryResult.result.results.filter(result=>{
+            return result.result_metadata.collection_id === collection_id;
+        })
+        let splitTextContent = helpQueries[0].text[0].split("\n");
+        let helpSolution = ""
+        if (splitTextContent.length >= 10) {
+            for (let i = 12; i < splitTextContent.length; i++) {
+                if(splitTextContent[i] === "Was this article helpful?" ) {
+                    break;
+                }
+                helpSolution += splitTextContent[i]+" "
+            }
+            return {
+                res : helpSolution
+            }
+        } else {
+            throw new Error(
+            "Sorry, we are unable to find the answer from Help Centre."
+            );
+        }
+    } catch (err) {
+        throw new Error(err.message);
+    }
+};
+
+const CourseraAdvisor = {
+    async connectDiscovery(params) {
+        const {
+        discoveryAPIKey,
+        projectId,
+        input,
+        intent,
+        url
+        } = params;
+        try {
+            const queryResult = await queryDiscovery(
+            projectId,
+            discoveryAPIKey,
+            input,
+            intent,
+            url
+            );
+            let res;
+            if (intent === "course_recommendation") {
+                res = await recommendCourse(queryResult);
+            } else {
+                res = await answerFaq(queryResult);
+            }
+            return res;
+        } catch (err) {
+            return { err: err.message };
+        }
+    }
+};
+module.exports = CourseraAdvisor
