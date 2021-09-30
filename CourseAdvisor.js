@@ -10,7 +10,6 @@ async function queryDiscovery(  projectId,
                             ) {
     // Function to query Discovery
     try {
-        projectId = projectId;
         const discovery = new DiscoveryV2({
             version: '2020-08-30',
             authenticator: new IamAuthenticator({
@@ -23,7 +22,7 @@ async function queryDiscovery(  projectId,
         if(intent === "faq") {
             collectionName = "help center"
         }
-        collections = results.result.collections;
+        let collections = results.result.collections;
         let collection = collections.filter(resultVal=>{
             return resultVal.name === collectionName
         })
@@ -37,7 +36,7 @@ async function queryDiscovery(  projectId,
     } catch (err) {
         throw new Error(err.message);
     }
-};
+}
 
 async function recommendCourse(queryResult) {
     try {
@@ -61,7 +60,7 @@ async function recommendCourse(queryResult) {
     } catch (err) {
         throw new Error(err.message);
     }
-};
+}
 
 async function answerFaq(queryResult) {
     try {
@@ -88,7 +87,7 @@ async function answerFaq(queryResult) {
     } catch (err) {
         throw new Error(err.message);
     }
-};
+}
 
 const CourseraAdvisor = {
     async connectDiscovery(params) {
